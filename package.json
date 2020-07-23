@@ -1,0 +1,43 @@
+{
+    "name": "myapp",
+    "version": "0.1.0",
+    "private": true,
+    "dependencies": {
+        "@material/dialog": "^7.0.0",
+        "@material/ripple": "^7.0.0",
+        "@testing-library/jest-dom": "^4.2.4",
+        "@testing-library/react": "^9.3.2",
+        "@testing-library/user-event": "^7.1.2",
+        "firebase": "^7.16.1",
+        "firebase-tools": "^8.6.0",
+        "overmind": "^23.1.0",
+        "overmind-react": "^24.1.0",
+        "postcss": "^7.0.32",
+        "react": "^16.13.1",
+        "react-dom": "^16.13.1",
+        "react-scripts": "3.4.1",
+        "react-toastify": "^6.0.8",
+        "tailwindcss": "^1.4.6"
+    },
+    "scripts": {
+        "start": "react-scripts start",
+        "build": "react-scripts build",
+        "test": "react-scripts test",
+        "eject": "react-scripts eject"
+    },
+    "eslintConfig": {
+        "extends": "react-app"
+    },
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
+    }
+}
