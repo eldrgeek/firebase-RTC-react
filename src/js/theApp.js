@@ -1,18 +1,19 @@
 import firebase from "firebase";
 import { MDCRipple } from "@material/ripple";
 import { MDCDialog } from "@material/dialog";
+import { json } from "overmind";
 const theApp = ({ state, actions, effects }) => {
   MDCRipple.attachTo(document.querySelector(".mdc-button"));
-  const firebaseConfig = {
-    apiKey: "AIzaSyAEM9uGdlfMsFAX1FaYBuiWT3Bh0ZfFRcE",
-    authDomain:
-      "https://3000-feeffad4-e711-4e5f-9f7f-891b31f22047.ws-us02.gitpod.io/",
-    databaseURL: "https://civicapathyproject.firebaseio.com",
-    projectId: "civicapathyproject",
-    storageBucket: "civicapathyproject.appspot.com",
-    messagingSenderId: "208039221624",
-    appId: "1:208039221624:web:894094b7d962d148aed08d"
-  };
+  //   const firebaseConfig = {
+  //     apiKey: "AIzaSyAEM9uGdlfMsFAX1FaYBuiWT3Bh0ZfFRcE",
+  //     authDomain:
+  //       "https://3000-feeffad4-e711-4e5f-9f7f-891b31f22047.ws-us02.gitpod.io/",
+  //     databaseURL: "https://civicapathyproject.firebaseio.com",
+  //     projectId: "civicapathyproject",
+  //     storageBucket: "civicapathyproject.appspot.com",
+  //     messagingSenderId: "208039221624",
+  //     appId: "1:208039221624:web:894094b7d962d148aed08d"
+  //   };
   // effects.firebase.api.initialze()
   // const firebase = effects.firebase.api.getFirebase()
   //   if (!state.firebase.initialized) {
@@ -60,9 +61,11 @@ const theApp = ({ state, actions, effects }) => {
 
     registerPeerConnectionListeners();
 
-    localStream.getTracks().forEach(track => {
-      peerConnection.addTrack(track, localStream);
-    });
+    json(state.firebase.localStream)
+      .getTracks()
+      .forEach(track => {
+        peerConnection.addTrack(track, json(state.firebase.localStream));
+      });
 
     // Code for collecting ICE candidates below
     const callerCandidatesCollection = roomRef.collection("callerCandidates");
@@ -100,7 +103,7 @@ const theApp = ({ state, actions, effects }) => {
       console.log("Got remote track:", event.streams[0]);
       event.streams[0].getTracks().forEach(track => {
         console.log("Add a track to the remoteStream:", track);
-        remoteStream.addTrack(track);
+        json(state.firebase.remoteStream).addTrack(track);
       });
     });
 
@@ -153,16 +156,17 @@ const theApp = ({ state, actions, effects }) => {
     // const bigSnap = await firebase.firestore().collection('rooms').get()
     // bigSnap.docs.map(doc => { console.log(doc.data()) });
     const roomSnapshot = await roomRef.get();
-    debugger;
     console.log("Got room:", roomSnapshot.exists);
 
     if (roomSnapshot.exists) {
       console.log("Create PeerConnection with configuration: ", configuration);
       peerConnection = new RTCPeerConnection(configuration);
       registerPeerConnectionListeners();
-      localStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, localStream);
-      });
+      json(state.firebase.localStream)
+        .getTracks()
+        .forEach(track => {
+          peerConnection.addTrack(track, json(state.firebase.localStream));
+        });
 
       // Code for collecting ICE candidates below
       const calleeCandidatesCollection = roomRef.collection("calleeCandidates");
@@ -180,7 +184,7 @@ const theApp = ({ state, actions, effects }) => {
         console.log("Got remote track:", event.streams[0]);
         event.streams[0].getTracks().forEach(track => {
           console.log("Add a track to the remoteStream:", track);
-          remoteStream.addTrack(track);
+          json(state.firebase.remoteStream).addTrack(track);
         });
       });
 
@@ -220,14 +224,21 @@ const theApp = ({ state, actions, effects }) => {
   }
 
   async function openUserMedia(e) {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true
-    });
-    document.querySelector("#localVideo").srcObject = stream;
-    localStream = stream;
-    remoteStream = new MediaStream();
-    document.querySelector("#remoteVideo").srcObject = remoteStream;
+    console.log(effects.firebase);
+    await actions.firebase.openUserMedia();
+    // const stream = await navigator.mediaDevices.getUserMedia({
+    //   video: true,
+    //   audio: true
+    // });
+    console.log("LS", json(state.firebase.localStream));
+    document.querySelector("#localVideo").srcObject = json(
+      state.firebase.localStream
+    );
+    // localStream = stream;
+    // remoteStream = new MediaStream();
+    document.querySelector("#remoteVideo").srcObject = json(
+      state.firebase.remoteStream
+    );
 
     console.log("Stream:", document.querySelector("#localVideo").srcObject);
     document.querySelector("#cameraBtn").disabled = true;
@@ -237,13 +248,17 @@ const theApp = ({ state, actions, effects }) => {
   }
 
   async function hangUp(e) {
-    const tracks = document.querySelector("#localVideo").srcObject.getTracks();
+    // const tracks = document.querySelector("#localVideo").srcObject.getTracks();
+    const stream = json(state.firebase.localStream);
+    const tracks = stream.getTracks();
     tracks.forEach(track => {
       track.stop();
     });
 
-    if (remoteStream) {
-      remoteStream.getTracks().forEach(track => track.stop());
+    if (state.firebase.remoteStream) {
+      json(state.firebase.remoteStream)
+        .getTracks()
+        .forEach(track => track.stop());
     }
 
     if (peerConnection) {
@@ -277,7 +292,7 @@ const theApp = ({ state, actions, effects }) => {
       await roomRef.delete();
     }
 
-    document.location.reload(true);
+    // document.location.reload(true);
   }
 
   function registerPeerConnectionListeners() {

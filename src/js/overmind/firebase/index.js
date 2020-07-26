@@ -1,5 +1,17 @@
 import * as firebase from "firebase";
-const state = {};
+const state = {
+  initialized: false,
+  connectionName: 'test',
+  localStream: null,
+  remoteStream: null,
+  roomId: null,
+  peerConnections: {
+    test:{
+      peerConnection: null
+    }
+  }
+
+};
 const firebaseConfig = {
   apiKey: "AIzaSyAEM9uGdlfMsFAX1FaYBuiWT3Bh0ZfFRcE",
   authDomain:
@@ -30,6 +42,7 @@ const api = (() => {
     getFirebase() {
       return fb;
     },
+    
     async getRoomRef() {
       const db = firebase.firestore();
       const roomRef = await db.collection("rooms").doc();
@@ -42,10 +55,18 @@ const actions = {
   async setInitialized({ state }) {
     state.firebase.initialized = true;
   },
-  async getRoomRef({ state: { firebase }, effects }) {
-    const roomRef = await effects.app.getRoomRef();
+  async getRoom({ state: { firebase }, effects }) {
+    const roomRef = await effects.firebase.api.getRoomRef();
     firebase.roomRef = roomRef;
-  }
+  },
+  async openUserMedia({state}) {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true
+    });
+    state.firebase.localStream = stream
+    state.firebase.remoteStream =  new MediaStream()
+  },
 };
 
 const effects = {
