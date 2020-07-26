@@ -6,7 +6,7 @@ const theApp = ({ state, actions, effects }) => {
   MDCRipple.attachTo(document.querySelector(".mdc-button"));
   //   const firebaseConfig = {
   //     apiKey: "AIzaSyAEM9uGdlfMsFAX1FaYBuiWT3Bh0ZfFRcE",
-  //     authDomain:
+  //     authDfsomain:
   //       "https://3000-feeffad4-e711-4e5f-9f7f-891b31f22047.ws-us02.gitpod.io/",
   //     databaseURL: "https://civicapathyproject.firebaseio.com",
   //     projectId: "civicapathyproject",
@@ -23,18 +23,7 @@ const theApp = ({ state, actions, effects }) => {
   //   }
   effects.firebase.api.initialize({ state, actions });
   //   effects.firebase,api.initialize()
-  const configuration = {
-    iceServers: [
-      {
-        urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"]
-      }
-    ],
-    iceCandidatePoolSize: 10
-  };
 
-  let peerConnection = null;
-  let localStream = null;
-  let remoteStream = null;
   let roomDialog = null;
   let roomId = null;
 
@@ -56,33 +45,38 @@ const theApp = ({ state, actions, effects }) => {
     // const bigSnap = await firebase.firestore().collection('rooms').get()
     // console.log("BIGSNAP!!")
     // bigSnap.docs.map(doc => { console.log("BIGSNAP", doc.data()) });
-    console.log("Create PeerConnection with configuration: ", configuration);
-    peerConnection = new RTCPeerConnection(configuration);
+    // console.log("Create PeerConnection with configuration: ", configuration);
+    actions.firebase.createPeerConnection();
+    // peerConnection = new RTCPeerConnection(configuration);
 
-    registerPeerConnectionListeners();
-
-    json(state.firebase.localStream)
+    // registerPeerConnectionListeners();
+    actions.firebase
+      .getLocalStream()
       .getTracks()
       .forEach(track => {
-        peerConnection.addTrack(track, json(state.firebase.localStream));
+        actions.firebase
+          .getPeerConnection()
+          .addTrack(track, actions.firebase.getLocalStream());
       });
 
     // Code for collecting ICE candidates below
     const callerCandidatesCollection = roomRef.collection("callerCandidates");
 
-    peerConnection.addEventListener("icecandidate", event => {
-      if (!event.candidate) {
-        // console.log('Got final candidate!');
-        return;
-      }
-      // console.log('Got candidate: ', event.candidate);
-      callerCandidatesCollection.add(event.candidate.toJSON());
-    });
+    actions.firebase
+      .getPeerConnection()
+      .addEventListener("icecandidate", event => {
+        if (!event.candidate) {
+          // console.log('Got final candidate!');
+          return;
+        }
+        // console.log('Got candidate: ', event.candidate);
+        callerCandidatesCollection.add(event.candidate.toJSON());
+      });
     // Code for collecting ICE candidates above
 
     // Code for creating a room below
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
+    const offer = await actions.firebase.getPeerConnection().createOffer();
+    await actions.firebase.getPeerConnection().setLocalDescription(offer);
     // console.log('Created offer:', offer);
 
     const roomWithOffer = {
@@ -99,21 +93,27 @@ const theApp = ({ state, actions, effects }) => {
     } - You are the caller!`;
     // Code for creating a room above
 
-    peerConnection.addEventListener("track", event => {
+    actions.firebase.getPeerConnection().addEventListener("track", event => {
       console.log("Got remote track:", event.streams[0]);
       event.streams[0].getTracks().forEach(track => {
         console.log("Add a track to the remoteStream:", track);
-        json(state.firebase.remoteStream).addTrack(track);
+        actions.firebase.getRemoteStream().addTrack(track);
       });
     });
 
     // Listening for remote session description below
     roomRef.onSnapshot(async snapshot => {
       const data = snapshot.data();
-      if (!peerConnection.currentRemoteDescription && data && data.answer) {
+      if (
+        !actions.firebase.getPeerConnection().currentRemoteDescription &&
+        data &&
+        data.answer
+      ) {
         console.log("Got remote description: ", data.answer);
         const rtcSessionDescription = new RTCSessionDescription(data.answer);
-        await peerConnection.setRemoteDescription(rtcSessionDescription);
+        await actions.firebase
+          .getPeerConnection()
+          .setRemoteDescription(rtcSessionDescription);
       }
     });
     // Listening for remote session description above
@@ -124,7 +124,9 @@ const theApp = ({ state, actions, effects }) => {
         if (change.type === "added") {
           let data = change.doc.data();
           console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
-          await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+          await actions.firebase
+            .getPeerConnection()
+            .addIceCandidate(new RTCIceCandidate(data));
         }
       });
     });
@@ -159,44 +161,51 @@ const theApp = ({ state, actions, effects }) => {
     console.log("Got room:", roomSnapshot.exists);
 
     if (roomSnapshot.exists) {
-      console.log("Create PeerConnection with configuration: ", configuration);
-      peerConnection = new RTCPeerConnection(configuration);
-      registerPeerConnectionListeners();
-      json(state.firebase.localStream)
+      // console.log("Create PeerConnection with configuration: ", configuration);
+      actions.firebase.createPeerConnection();
+
+      // peerConnection = new RTCPeerConnection(configuration);
+      // registerPeerConnectionListeners();
+      actions.firebase
+        .getLocalStream()
         .getTracks()
         .forEach(track => {
-          peerConnection.addTrack(track, json(state.firebase.localStream));
+          actions.firebase
+            .getPeerConnection()
+            .addTrack(track, actions.firebase.getLocalStream());
         });
 
       // Code for collecting ICE candidates below
       const calleeCandidatesCollection = roomRef.collection("calleeCandidates");
-      peerConnection.addEventListener("icecandidate", event => {
-        if (!event.candidate) {
-          console.log("Got final candidate!");
-          return;
-        }
-        console.log("Got candidate: ", event.candidate);
-        calleeCandidatesCollection.add(event.candidate.toJSON());
-      });
+      actions.firebase
+        .getPeerConnection()
+        .addEventListener("icecandidate", event => {
+          if (!event.candidate) {
+            console.log("Got final candidate!");
+            return;
+          }
+          console.log("Got candidate: ", event.candidate);
+          calleeCandidatesCollection.add(event.candidate.toJSON());
+        });
       // Code for collecting ICE candidates above
 
-      peerConnection.addEventListener("track", event => {
+      actions.firebase.getPeerConnection().addEventListener("track", event => {
         console.log("Got remote track:", event.streams[0]);
         event.streams[0].getTracks().forEach(track => {
           console.log("Add a track to the remoteStream:", track);
-          json(state.firebase.remoteStream).addTrack(track);
+          actions.firebase.getRemoteStream().addTrack(track);
         });
       });
 
       // Code for creating SDP answer below
       const offer = roomSnapshot.data().offer;
       console.log("Got offer:", offer);
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(offer)
-      );
-      const answer = await peerConnection.createAnswer();
+      await actions.firebase
+        .getPeerConnection()
+        .setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await actions.firebase.getPeerConnection().createAnswer();
       console.log("Created answer:", answer);
-      await peerConnection.setLocalDescription(answer);
+      await actions.firebase.getPeerConnection().setLocalDescription(answer);
 
       const roomWithAnswer = {
         answer: {
@@ -215,7 +224,9 @@ const theApp = ({ state, actions, effects }) => {
             console.log(
               `Got new remote ICE candidate: ${JSON.stringify(data)}`
             );
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+            await actions.firebase
+              .getPeerConnection()
+              .addIceCandidate(new RTCIceCandidate(data));
           }
         });
       });
@@ -230,15 +241,15 @@ const theApp = ({ state, actions, effects }) => {
     //   video: true,
     //   audio: true
     // });
-    console.log("LS", json(state.firebase.localStream));
-    document.querySelector("#localVideo").srcObject = json(
-      state.firebase.localStream
-    );
+    console.log("LS", actions.firebase.getLocalStream());
+    document.querySelector(
+      "#localVideo"
+    ).srcObject = actions.firebase.getLocalStream();
     // localStream = stream;
     // remoteStream = new MediaStream();
-    document.querySelector("#remoteVideo").srcObject = json(
-      state.firebase.remoteStream
-    );
+    document.querySelector(
+      "#remoteVideo"
+    ).srcObject = actions.firebase.getRemoteStream();
 
     console.log("Stream:", document.querySelector("#localVideo").srcObject);
     document.querySelector("#cameraBtn").disabled = true;
@@ -249,20 +260,21 @@ const theApp = ({ state, actions, effects }) => {
 
   async function hangUp(e) {
     // const tracks = document.querySelector("#localVideo").srcObject.getTracks();
-    const stream = json(state.firebase.localStream);
+    const stream = actions.firebase.getLocalStream();
     const tracks = stream.getTracks();
     tracks.forEach(track => {
       track.stop();
     });
 
-    if (state.firebase.remoteStream) {
-      json(state.firebase.remoteStream)
+    if (actions.firebase.getRemoteStream()) {
+      actions.firebase
+        .getRemoteStream()
         .getTracks()
         .forEach(track => track.stop());
     }
 
-    if (peerConnection) {
-      peerConnection.close();
+    if (actions.firebase.getPeerConnection()) {
+      actions.firebase.getPeerConnection().close();
     }
 
     document.querySelector("#localVideo").srcObject = null;
@@ -295,27 +307,27 @@ const theApp = ({ state, actions, effects }) => {
     // document.location.reload(true);
   }
 
-  function registerPeerConnectionListeners() {
-    peerConnection.addEventListener("icegatheringstatechange", () => {
-      console.log(
-        `ICE gathering state changed: ${peerConnection.iceGatheringState}`
-      );
-    });
+  // function registerPeerConnectionListeners() {
+  //   peerConnection.addEventListener("icegatheringstatechange", () => {
+  //     console.log(
+  //       `ICE gathering state changed: ${peerConnection.iceGatheringState}`
+  //     );
+  //   });
 
-    peerConnection.addEventListener("connectionstatechange", () => {
-      console.log(`Connection state change: ${peerConnection.connectionState}`);
-    });
+  //   peerConnection.addEventListener("connectionstatechange", () => {
+  //     console.log(`Connection state change: ${peerConnection.connectionState}`);
+  //   });
 
-    peerConnection.addEventListener("signalingstatechange", () => {
-      console.log(`Signaling state change: ${peerConnection.signalingState}`);
-    });
+  //   peerConnection.addEventListener("signalingstatechange", () => {
+  //     console.log(`Signaling state change: ${peerConnection.signalingState}`);
+  //   });
 
-    peerConnection.addEventListener("iceconnectionstatechange ", () => {
-      console.log(
-        `ICE connection state change: ${peerConnection.iceConnectionState}`
-      );
-    });
-  }
+  //   peerConnection.addEventListener("iceconnectionstatechange ", () => {
+  //     console.log(
+  //       `ICE connection state change: ${peerConnection.iceConnectionState}`
+  //     );
+  //   });
+  // }
 
   init();
 };

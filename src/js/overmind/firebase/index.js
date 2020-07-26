@@ -1,16 +1,17 @@
 import * as firebase from "firebase";
+import { json } from "overmind";
+
 const state = {
   initialized: false,
-  connectionName: 'test',
+  connectionName: "test",
   localStream: null,
   remoteStream: null,
   roomId: null,
   peerConnections: {
-    test:{
+    test: {
       peerConnection: null
     }
   }
-
 };
 const firebaseConfig = {
   apiKey: "AIzaSyAEM9uGdlfMsFAX1FaYBuiWT3Bh0ZfFRcE",
@@ -42,7 +43,7 @@ const api = (() => {
     getFirebase() {
       return fb;
     },
-    
+
     async getRoomRef() {
       const db = firebase.firestore();
       const roomRef = await db.collection("rooms").doc();
@@ -59,14 +60,37 @@ const actions = {
     const roomRef = await effects.firebase.api.getRoomRef();
     firebase.roomRef = roomRef;
   },
-  async openUserMedia({state}) {
+  async openUserMedia({ state }) {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: true,
       audio: true
     });
-    state.firebase.localStream = stream
-    state.firebase.remoteStream =  new MediaStream()
+    state.firebase.localStream = stream;
+    state.firebase.remoteStream = new MediaStream();
   },
+  getLocalStream({ state }) {
+    return json(state.firebase.localStream);
+  },
+  getRemoteStream({ state }) {
+    return json(state.firebase.remoteStream);
+  },
+  getPeerConnection({ state }) {
+    return json(state.firebase.peerConnection);
+  },
+  createPeerConnection({ state }) {
+    const configuration = {
+      iceServers: [
+        {
+          urls: [
+            "stun:stun1.l.google.com:19302",
+            "stun:stun2.l.google.com:19302"
+          ]
+        }
+      ],
+      iceCandidatePoolSize: 10
+    };
+    state.firebase.peerConnection = new RTCPeerConnection(configuration);
+  }
 };
 
 const effects = {
