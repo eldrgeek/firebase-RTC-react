@@ -25,7 +25,6 @@ const theApp = ({ state, actions, effects }) => {
   //   effects.firebase,api.initialize()
 
   let roomDialog = null;
-  let roomId = null;
 
   function init() {
     document
@@ -67,7 +66,9 @@ const theApp = ({ state, actions, effects }) => {
     document.querySelector("#confirmJoinBtn").addEventListener(
       "click",
       async () => {
-        roomId = document.querySelector("#room-id").value;
+        const roomId = document.querySelector("#room-id").value;
+
+        actions.firebase.setRoomId(roomId);
         console.log("Join room: ", roomId);
         document.querySelector(
           "#currentRoom"
@@ -80,87 +81,85 @@ const theApp = ({ state, actions, effects }) => {
   }
 
   async function joinRoomById(roomId) {
-    // const db = firebase.firestore();
-    // const roomRef = db.collection("rooms").doc(`${roomId}`);
     await actions.firebase.setRoomRef(`${roomId}`);
-    // const bigSnap = await firebase.firestore().collection('rooms').get()
-    // bigSnap.docs.map(doc => { console.log(doc.data()) });
-    const roomSnapshot = await actions.firebase.getRoomRef().get();
-    console.log("Got room:", roomSnapshot.exists);
+    await actions.firebase.getRoomSnapshot();
 
-    if (roomSnapshot.exists) {
-      // console.log("Create PeerConnection with configuration: ", configuration);
-      actions.firebase.createPeerConnection();
+    // const roomSnapshot = await actions.firebase.getRoomRef().get();
+    // console.log("Got room:", roomSnapshot.exists);
 
-      // peerConnection = new RTCPeerConnection(configuration);
-      // registerPeerConnectionListeners();
-      actions.firebase.addLocalTracks();
+    // if (roomSnapshot.exists) {
+    //   // console.log("Create PeerConnection with configuration: ", configuration);
+    //   actions.firebase.createPeerConnection();
 
-      // Code for collecting ICE candidates below
-      actions.firebase.addCalleeCandidateCollection();
+    //   // peerConnection = new RTCPeerConnection(configuration);
+    //   // registerPeerConnectionListeners();
+    //   actions.firebase.addLocalTracks();
 
-      const calleeCandidatesCollection = actions.firebase
-        .getRoomRef()
-        .collection("calleeCandidates");
+    //   // Code for collecting ICE candidates below
+    //   actions.firebase.addCalleeCandidateCollection();
 
-      actions.firebase
-        .getPeerConnection()
-        .addEventListener("icecandidate", event => {
-          if (!event.candidate) {
-            console.log("Got final candidate!");
-            return;
-          }
-          console.log("Got candidate: ", event.candidate);
-          calleeCandidatesCollection.add(event.candidate.toJSON());
-        });
-      // Code for collecting ICE candidates above
+    //   const calleeCandidatesCollection = actions.firebase
+    //     .getRoomRef()
+    //     .collection("calleeCandidates");
 
-      actions.firebase.getPeerConnection().addEventListener("track", event => {
-        console.log("Got remote track:", event.streams[0]);
-        event.streams[0].getTracks().forEach(track => {
-          console.log("Add a track to the remoteStream:", track);
-          actions.firebase.getRemoteStream().addTrack(track);
-        });
-      });
+    //   actions.firebase
+    //     .getPeerConnection()
+    //     .addEventListener("icecandidate", event => {
+    //       if (!event.candidate) {
+    //         console.log("Got final candidate!");
+    //         return;
+    //       }
+    //       console.log("Got candidate: ", event.candidate);
+    //       calleeCandidatesCollection.add(event.candidate.toJSON());
+    //     });
+    //   // Code for collecting ICE candidates above
 
-      // Code for creating SDP answer below
-      const offer = roomSnapshot.data().offer;
-      console.log("Got offer:", offer);
-      await actions.firebase
-        .getPeerConnection()
-        .setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await actions.firebase.getPeerConnection().createAnswer();
-      console.log("Created answer:", answer);
-      await actions.firebase.getPeerConnection().setLocalDescription(answer);
+    //   actions.firebase.getPeerConnection().addEventListener("track", event => {
+    //     console.log("Got remote track:", event.streams[0]);
+    //     event.streams[0].getTracks().forEach(track => {
+    //       console.log("Add a track to the remoteStream:", track);
+    //       actions.firebase.getRemoteStream().addTrack(track);
+    //     });
+    //   });
 
-      const roomWithAnswer = {
-        answer: {
-          type: answer.type,
-          sdp: answer.sdp
-        }
-      };
-      await actions.firebase.getRoomRef().update(roomWithAnswer);
-      // Code for creating SDP answer above
+    //   // Code for creating SDP answer below
+    //   const offer = roomSnapshot.data().offer;
+    //   console.log("Got offer:", offer);
+    //   await actions.firebase
+    //     .getPeerConnection()
+    //     .setRemoteDescription(new RTCSessionDescription(offer));
+    //   const answer = await actions.firebase.getPeerConnection().createAnswer();
+    //   console.log("Created answer:", answer);
+    //   await actions.firebase.getPeerConnection().setLocalDescription(answer);
 
-      // Listening for remote ICE candidates below
-      actions.firebase
-        .getRoomRef()
-        .collection("callerCandidates")
-        .onSnapshot(snapshot => {
-          snapshot.docChanges().forEach(async change => {
-            if (change.type === "added") {
-              let data = change.doc.data();
-              console.log(
-                `Got new remote ICE candidate: ${JSON.stringify(data)}`
-              );
-              await actions.firebase
-                .getPeerConnection()
-                .addIceCandidate(new RTCIceCandidate(data));
-            }
-          });
-        });
-      // Listening for remote ICE candidates above
-    }
+    //   const roomWithAnswer = {
+    //     answer: {
+    //       type: answer.type,
+    //       sdp: answer.sdp
+    //     }
+    //   };
+    //   await actions.firebase.getRoomRef().update(roomWithAnswer);
+    //   // Code for creating SDP answer above
+
+    //   // Listening for remote ICE candidates below
+    //   actions.firebase
+    //     .getRoomRef()
+    //     .collection("callerCandidates")
+    //     .onSnapshot(snapshot => {
+    //       snapshot.docChanges().forEach(async change => {
+    //         if (change.type === "added") {
+    //           let data = change.doc.data();
+    //           console.log(
+    //             `Got new remote ICE candidate: ${JSON.stringify(data)}`
+    //           );
+    //           await actions.firebase
+    //             .getPeerConnection()
+    //             .addIceCandidate(new RTCIceCandidate(data));
+    //         }
+    //       });
+    //     });
+    //   // Listening for remote ICE candidates above
+    // }
   }
 
   async function openUserMedia(e) {
@@ -188,23 +187,7 @@ const theApp = ({ state, actions, effects }) => {
   }
 
   async function hangUp(e) {
-    // const tracks = document.querySelector("#localVideo").srcObject.getTracks();
-    const stream = actions.firebase.getLocalStream();
-    const tracks = stream.getTracks();
-    tracks.forEach(track => {
-      track.stop();
-    });
-
-    if (actions.firebase.getRemoteStream()) {
-      actions.firebase
-        .getRemoteStream()
-        .getTracks()
-        .forEach(track => track.stop());
-    }
-
-    if (actions.firebase.getPeerConnection()) {
-      actions.firebase.getPeerConnection().close();
-    }
+    actions.firebase.hangUp();
 
     document.querySelector("#localVideo").srcObject = null;
     document.querySelector("#remoteVideo").srcObject = null;
@@ -215,25 +198,6 @@ const theApp = ({ state, actions, effects }) => {
     document.querySelector("#currentRoom").innerText = "";
 
     // Delete room on hangup
-    if (roomId) {
-      await actions.firebase.setRoomRef();
-      debugger;
-      const calleeCandidates = await actions.firebase
-        .getRoomRef()
-        .collection("calleeCandidates")
-        .get();
-      calleeCandidates.forEach(async candidate => {
-        await candidate.ref.delete();
-      });
-      const callerCandidates = await actions.firebase
-        .getRoomRef()
-        .collection("callerCandidates")
-        .get();
-      callerCandidates.forEach(async candidate => {
-        await candidate.ref.delete();
-      });
-      await actions.firebase.getRoomRef().delete();
-    }
 
     // document.location.reload(true);
   }
