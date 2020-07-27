@@ -7,6 +7,7 @@ const state = {
   localStream: null,
   remoteStream: null,
   roomId: null,
+  roomRef: null,
   peerConnections: {
     test: {
       peerConnection: null
@@ -24,41 +25,45 @@ const firebaseConfig = {
   appId: "1:208039221624:web:894094b7d962d148aed08d"
 };
 let fb;
+
 const api = (() => {
-  let state = null;
-  let actions = null;
   return {
     state: null,
-    initialize(context) {
+    initialize({ state, actions }) {
       console.log("Firebase initialized");
-      state = context.state;
-      actions = context.actions;
       if (!state.firebase.initialized) {
         console.log("initted");
-        actions.firebase.setInitialized();
         fb = firebase.initializeApp(firebaseConfig);
+        actions.firebase.setInitialized();
       }
       // state.firebase = firebase;
     },
     getFirebase() {
       return fb;
-    },
-
-    async getRoomRef() {
-      const db = firebase.firestore();
-      const roomRef = await db.collection("rooms").doc();
-      return roomRef;
     }
   };
 })();
 
 const actions = {
-  async setInitialized({ state }) {
+  async setInitialized({ state }, firebase) {
+    // debugger; // state.firebase.firebase = firebase;
     state.firebase.initialized = true;
   },
-  async getRoom({ state: { firebase }, effects }) {
-    const roomRef = await effects.firebase.api.getRoomRef();
-    firebase.roomRef = roomRef;
+  getFirebase({ state }) {
+    return firebase;
+  },
+  async setRoomRef({ state, actions }, roomId) {
+    console.log("Set roomref");
+    const fb = actions.firebase.getFirebase();
+    const db = fb.firestore();
+    if (roomId) {
+      state.firebase.roomRef = await db.collection("rooms").doc(roomId);
+    } else {
+      state.firebase.roomRef = await db.collection("rooms").doc();
+    }
+  },
+  getRoomRef({ state }) {
+    return json(state.firebase.roomRef);
   },
   async openUserMedia({ state }) {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -90,6 +95,30 @@ const actions = {
       iceCandidatePoolSize: 10
     };
     state.firebase.peerConnection = new RTCPeerConnection(configuration);
+  },
+  addLocalTracks({ state, actions }) {
+    actions.firebase
+      .getLocalStream()
+      .getTracks()
+      .forEach(track => {
+        actions.firebase
+          .getPeerConnection()
+          .addTrack(track, actions.firebase.getLocalStream());
+      });
+  },
+
+  addCalleeCandidateCollection({ state, actions }) {
+    // const calleeCandidatesCollection = roomRef.collection("calleeCandidates");
+    //   actions.firebase
+    //     .getPeerConnection()
+    //     .addEventListener("icecandidate", event => {
+    //       if (!event.candidate) {
+    //         console.log("Got final candidate!");
+    //         return;
+    //       }
+    //       console.log("Got candidate: ", event.candidate);
+    //       calleeCandidatesCollection.add(event.candidate.toJSON());
+    //     });
   }
 };
 
@@ -100,6 +129,7 @@ const effects = {
 const onInitialize = ({ state, actions, effects }) => {
   console.log("effects", effects);
   effects.firebase.api.initialize({ state, actions, effects });
+  console.log("init complete");
 };
 
 const config = {
