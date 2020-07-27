@@ -45,6 +45,86 @@ const api = (() => {
 })();
 
 const actions = {
+  setupCalleeCandidates({ actions }) {
+    actions.firebase
+      .getRoomRef()
+      .collection("calleeCandidates")
+      .onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(async change => {
+          if (change.type === "added") {
+            let data = change.doc.data();
+            console.log(
+              `Got new remote ICE candidate: ${JSON.stringify(data)}`
+            );
+            await actions.firebase
+              .getPeerConnection()
+              .addIceCandidate(new RTCIceCandidate(data));
+          }
+        });
+      });
+  },
+  setupSnapshotListener({ actions }) {
+    // Listening for remote session description below
+    actions.firebase.getRoomRef().onSnapshot(async snapshot => {
+      const data = snapshot.data();
+      if (
+        !actions.firebase.getPeerConnection().currentRemoteDescription &&
+        data &&
+        data.answer
+      ) {
+        console.log("Got remote description: ", data.answer);
+        const rtcSessionDescription = new RTCSessionDescription(data.answer);
+        await actions.firebase
+          .getPeerConnection()
+          .setRemoteDescription(rtcSessionDescription);
+      }
+    });
+  },
+  setupPeerListeners({ actions }) {
+    actions.firebase.getPeerConnection().addEventListener("track", event => {
+      console.log("Got remote track:", event.streams[0]);
+      event.streams[0].getTracks().forEach(track => {
+        console.log("Add a track to the remoteStream:", track);
+        actions.firebase.getRemoteStream().addTrack(track);
+      });
+    });
+  },
+  async setupLocalCandidates({ actions }) {
+    const callerCandidatesCollection = await actions.firebase
+      .getRoomRef()
+      .collection("callerCandidates");
+
+    actions.firebase
+      .getPeerConnection()
+      .addEventListener("icecandidate", event => {
+        if (!event.candidate) {
+          // console.log('Got final candidate!');
+          return;
+        }
+        // console.log('Got candidate: ', event.candidate);
+        callerCandidatesCollection.add(event.candidate.toJSON());
+      });
+    // Code for collecting ICE candidates above
+
+    // Code for creating a room below
+    const offer = await actions.firebase.getPeerConnection().createOffer();
+    await actions.firebase.getPeerConnection().setLocalDescription(offer);
+    // console.log('Created offer:', offer);
+
+    const roomWithOffer = {
+      offer: {
+        type: offer.type,
+        sdp: offer.sdp
+      }
+    };
+    await actions.firebase.getRoomRef().set(roomWithOffer);
+    // roomId = actions.firebase.getRoomRef().id;
+    console.log(
+      `New room created with SDP offer. Room ID: ${
+        actions.firebase.getRoomRef().id
+      }`
+    );
+  },
   async setInitialized({ state }, firebase) {
     // debugger; // state.firebase.firebase = firebase;
     state.firebase.initialized = true;

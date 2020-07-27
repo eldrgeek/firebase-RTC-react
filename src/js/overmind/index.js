@@ -48,8 +48,9 @@ const mergedConfig = merge(
 const initialize = () => {
   console.log("oninitialize");
   app = createOvermind(mergedConfig, {
-    devtools: "penguin.linux.test:3031"
-    // devtools: 'localhost:3031'
+    devtools: navigator.userAgent.match(/ CrOS /)
+      ? "penguin.linux.test:3031"
+      : "localhost:3031"
   });
   // setProxyActions(app.actions)
   useApp = createHook();

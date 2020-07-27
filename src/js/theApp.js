@@ -1,7 +1,7 @@
-import firebase from "firebase";
+// import firebase from "firebase";
 import { MDCRipple } from "@material/ripple";
 import { MDCDialog } from "@material/dialog";
-import { json } from "overmind";
+// import { json } from "overmind";
 const theApp = ({ state, actions, effects }) => {
   MDCRipple.attachTo(document.querySelector(".mdc-button"));
   //   const firebaseConfig = {
@@ -41,107 +41,22 @@ const theApp = ({ state, actions, effects }) => {
     document.querySelector("#createBtn").disabled = true;
     document.querySelector("#joinBtn").disabled = true;
     await actions.firebase.setRoomRef();
-    // const db = firebase.firestore();
-    // const roomRef = await db.collection("rooms").doc();
-    // const bigSnap = await firebase.firestore().collection('rooms').get()
-    // console.log("BIGSNAP!!")
-    // bigSnap.docs.map(doc => { console.log("BIGSNAP", doc.data()) });
-    // console.log("Create PeerConnection with configuration: ", configuration);
     await actions.firebase.createPeerConnection();
-    // peerConnection = new RTCPeerConnection(configuration);
+    actions.firebase.addLocalTracks();
+    await actions.firebase.setupLocalCandidates();
 
-    // registerPeerConnectionListeners();
-    actions.firebase
-      .getLocalStream()
-      .getTracks()
-      .forEach(track => {
-        actions.firebase
-          .getPeerConnection()
-          .addTrack(track, actions.firebase.getLocalStream());
-      });
-
-    // Code for collecting ICE candidates below
-    const callerCandidatesCollection = await actions.firebase
-      .getRoomRef()
-      .collection("callerCandidates");
-
-    actions.firebase
-      .getPeerConnection()
-      .addEventListener("icecandidate", event => {
-        if (!event.candidate) {
-          // console.log('Got final candidate!');
-          return;
-        }
-        // console.log('Got candidate: ', event.candidate);
-        callerCandidatesCollection.add(event.candidate.toJSON());
-      });
-    // Code for collecting ICE candidates above
-
-    // Code for creating a room below
-    const offer = await actions.firebase.getPeerConnection().createOffer();
-    await actions.firebase.getPeerConnection().setLocalDescription(offer);
-    // console.log('Created offer:', offer);
-
-    const roomWithOffer = {
-      offer: {
-        type: offer.type,
-        sdp: offer.sdp
-      }
-    };
-    await actions.firebase.getRoomRef().set(roomWithOffer);
-    roomId = actions.firebase.getRoomRef().id;
-    console.log(
-      `New room created with SDP offer. Room ID: ${
-        actions.firebase.getRoomRef().id
-      }`
-    );
     document.querySelector("#currentRoom").innerText = `Current room is ${
       actions.firebase.getRoomRef().id
     } - You are the caller!`;
     // Code for creating a room above
+    actions.firebase.setupPeerListeners();
+    actions.firebase.setupSnapshotListener();
 
-    actions.firebase.getPeerConnection().addEventListener("track", event => {
-      console.log("Got remote track:", event.streams[0]);
-      event.streams[0].getTracks().forEach(track => {
-        console.log("Add a track to the remoteStream:", track);
-        actions.firebase.getRemoteStream().addTrack(track);
-      });
-    });
-
-    // Listening for remote session description below
-    actions.firebase.getRoomRef().onSnapshot(async snapshot => {
-      const data = snapshot.data();
-      if (
-        !actions.firebase.getPeerConnection().currentRemoteDescription &&
-        data &&
-        data.answer
-      ) {
-        console.log("Got remote description: ", data.answer);
-        const rtcSessionDescription = new RTCSessionDescription(data.answer);
-        await actions.firebase
-          .getPeerConnection()
-          .setRemoteDescription(rtcSessionDescription);
-      }
-    });
     // Listening for remote session description above
 
     // Listen for remote ICE candidates below
-    actions.firebase
-      .getRoomRef()
-      .collection("calleeCandidates")
-      .onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(async change => {
-          if (change.type === "added") {
-            let data = change.doc.data();
-            console.log(
-              `Got new remote ICE candidate: ${JSON.stringify(data)}`
-            );
-            await actions.firebase
-              .getPeerConnection()
-              .addIceCandidate(new RTCIceCandidate(data));
-          }
-        });
-      });
+    actions.firebase.setupCalleeCandidates();
+
     // Listen for remote ICE candidates above
   }
 
