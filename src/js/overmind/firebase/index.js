@@ -45,6 +45,11 @@ const api = (() => {
 })();
 
 const actions = {
+  async joinRoomById({ actions }, roomId) {
+    actions.firebase.setRoomId(roomId);
+    await actions.firebase.setRoomRef(`${roomId}`);
+    await actions.firebase.getRoomSnapshot();
+  },
   setRoomId({ state }, roomId) {
     state.firebase.roomId = roomId;
   },
