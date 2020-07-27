@@ -21,13 +21,7 @@ const theApp = ({ state, actions, effects }) => {
   }
 
   async function createRoom() {
-    await actions.firebase.setRoomRef();
-    await actions.firebase.createPeerConnection();
-    actions.firebase.addLocalTracks();
-    await actions.firebase.setupLocalCandidates();
-    actions.firebase.setupPeerListeners();
-    actions.firebase.setupSnapshotListener();
-    actions.firebase.setupCalleeCandidates();
+    await actions.firebase.createRoom();
 
     document.querySelector("#createBtn").disabled = true;
     document.querySelector("#joinBtn").disabled = true;

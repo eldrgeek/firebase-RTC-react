@@ -45,6 +45,15 @@ const api = (() => {
 })();
 
 const actions = {
+  async createRoom({ actions }) {
+    await actions.firebase.setRoomRef();
+    await actions.firebase.createPeerConnection();
+    actions.firebase.addLocalTracks();
+    await actions.firebase.setupLocalCandidates();
+    actions.firebase.setupPeerListeners();
+    actions.firebase.setupSnapshotListener();
+    actions.firebase.setupCalleeCandidates();
+  },
   async joinRoomById({ actions }, roomId) {
     actions.firebase.setRoomId(roomId);
     await actions.firebase.setRoomRef(`${roomId}`);
@@ -262,9 +271,9 @@ const actions = {
     const fb = actions.firebase.getFirebase();
     const db = fb.firestore();
     if (roomId) {
-      state.firebase.roomRef = await db.collection("rooms").doc(roomId);
+      state.firebase.roomRef = await db.collection("connections").doc(roomId);
     } else {
-      state.firebase.roomRef = await db.collection("rooms").doc();
+      state.firebase.roomRef = await db.collection("connections").doc();
     }
   },
   getRoomRef({ state }) {
