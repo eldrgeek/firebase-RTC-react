@@ -1,12 +1,12 @@
-// import firebase from "firebase";
+// import.connection.from .connection.;
 import { MDCRipple } from "@material/ripple";
 import { MDCDialog } from "@material/dialog";
 // import { json } from "overmind";
 const theApp = ({ state, actions, effects }) => {
   MDCRipple.attachTo(document.querySelector(".mdc-button"));
 
-  effects.firebase.api.initialize({ state, actions });
-  //   effects.firebase,api.initialize()
+  effects.connection.api.initialize({ state, actions });
+  //   effects.connection.api.initialize()
 
   let roomDialog = null;
 
@@ -21,13 +21,13 @@ const theApp = ({ state, actions, effects }) => {
   }
 
   async function createRoom() {
-    await actions.firebase.createRoom();
+    await actions.connection.createRoom();
 
     document.querySelector("#createBtn").disabled = true;
     document.querySelector("#joinBtn").disabled = true;
 
     document.querySelector("#currentRoom").innerText = `Current room is ${
-      actions.firebase.getRoomRef().id
+      actions.connection.getRoomRef().id
     } - You are the caller!`;
     // Code for creating a room above
 
@@ -47,7 +47,7 @@ const theApp = ({ state, actions, effects }) => {
         document.querySelector(
           "#currentRoom"
         ).innerText = `Current room is ${roomId} - You are the callee!`;
-        await actions.firebase.joinRoomById(roomId);
+        await actions.connection.joinRoomById(roomId);
       },
       { once: true }
     );
@@ -55,28 +55,27 @@ const theApp = ({ state, actions, effects }) => {
   }
 
   // async function joinRoomById(roomId) {
-  //   actions.firebase.setRoomId(roomId);
-  //   await actions.firebase.setRoomRef(`${roomId}`);
-  //   await actions.firebase.getRoomSnapshot();
+  //   actions.connection.setRoomId(roomId);
+  //   await actions.connection.setRoomRef(`${roomId}`);
+  //   await actions.connection.getRoomSnapshot();
 
   // }
 
   async function openUserMedia(e) {
-    console.log(effects.firebase);
-    await actions.firebase.openUserMedia();
+    await actions.connection.openUserMedia();
     // const stream = await navigator.mediaDevices.getUserMedia({
     //   video: true,
     //   audio: true
     // });
-    console.log("LS", actions.firebase.getLocalStream());
+    console.log("LS", actions.connection.getLocalStream());
     document.querySelector(
       "#localVideo"
-    ).srcObject = actions.firebase.getLocalStream();
+    ).srcObject = actions.connection.getLocalStream();
     // localStream = stream;
     // remoteStream = new MediaStream();
     document.querySelector(
       "#remoteVideo"
-    ).srcObject = actions.firebase.getRemoteStream();
+    ).srcObject = actions.connection.getRemoteStream();
 
     console.log("Stream:", document.querySelector("#localVideo").srcObject);
     document.querySelector("#cameraBtn").disabled = true;
@@ -86,7 +85,7 @@ const theApp = ({ state, actions, effects }) => {
   }
 
   async function hangUp(e) {
-    actions.firebase.hangUp();
+    actions.connection.hangUp();
 
     document.querySelector("#localVideo").srcObject = null;
     document.querySelector("#remoteVideo").srcObject = null;

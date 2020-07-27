@@ -6,7 +6,7 @@ import { merge, namespaced } from "overmind/config";
 // import actions from "./actions";
 // import effects from "./effects";
 // import state from "./state";
-import firebase from "./firebase";
+import connection from "./connection";
 // import { proxyMethods, setProxyActions } from './proxyMethods'
 // export { proxyMethods }
 
@@ -41,7 +41,7 @@ export let useApp;
 const mergedConfig = merge(
   config,
   namespaced({
-    firebase
+    connection
   })
 );
 

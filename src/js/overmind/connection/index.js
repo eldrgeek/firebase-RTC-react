@@ -74,7 +74,7 @@ const actions = {
     });
 
     if (actions.connection.getRemoteStream()) {
-      actions.firebase
+      actions.connection
         .getRemoteStream()
         .getTracks()
         .forEach(track => track.stop());
@@ -85,14 +85,14 @@ const actions = {
     }
     if (actions.connection.getRoomId()) {
       await actions.connection.setRoomRef();
-      const calleeCandidates = await actions.firebase
+      const calleeCandidates = await actions.connection
         .getRoomRef()
         .collection("calleeCandidates")
         .get();
       calleeCandidates.forEach(async candidate => {
         await candidate.ref.delete();
       });
-      const callerCandidates = await actions.firebase
+      const callerCandidates = await actions.connection
         .getRoomRef()
         .collection("callerCandidates")
         .get();
@@ -117,11 +117,11 @@ const actions = {
       // Code for collecting ICE candidates below
       actions.connection.addCalleeCandidateCollection();
 
-      const calleeCandidatesCollection = actions.firebase
+      const calleeCandidatesCollection = actions.connection
         .getRoomRef()
         .collection("calleeCandidates");
 
-      actions.firebase
+      actions.connection
         .getPeerConnection()
         .addEventListener("icecandidate", event => {
           if (!event.candidate) {
@@ -146,7 +146,7 @@ const actions = {
       // Code for creating SDP answer below
       const offer = roomSnapshot.data().offer;
       console.log("Got offer:", offer);
-      await actions.firebase
+      await actions.connection
         .getPeerConnection()
         .setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await actions.connection
@@ -165,7 +165,7 @@ const actions = {
       // Code for creating SDP answer above
 
       // Listening for remote ICE candidates below
-      actions.firebase
+      actions.connection
         .getRoomRef()
         .collection("callerCandidates")
         .onSnapshot(snapshot => {
@@ -175,7 +175,7 @@ const actions = {
               console.log(
                 `Got new remote ICE candidate: ${JSON.stringify(data)}`
               );
-              await actions.firebase
+              await actions.connection
                 .getPeerConnection()
                 .addIceCandidate(new RTCIceCandidate(data));
             }
@@ -184,7 +184,7 @@ const actions = {
     }
   },
   setupCalleeCandidates({ actions }) {
-    actions.firebase
+    actions.connection
       .getRoomRef()
       .collection("calleeCandidates")
       .onSnapshot(snapshot => {
@@ -194,7 +194,7 @@ const actions = {
             console.log(
               `Got new remote ICE candidate: ${JSON.stringify(data)}`
             );
-            await actions.firebase
+            await actions.connection
               .getPeerConnection()
               .addIceCandidate(new RTCIceCandidate(data));
           }
@@ -212,7 +212,7 @@ const actions = {
       ) {
         console.log("Got remote description: ", data.answer);
         const rtcSessionDescription = new RTCSessionDescription(data.answer);
-        await actions.firebase
+        await actions.connection
           .getPeerConnection()
           .setRemoteDescription(rtcSessionDescription);
       }
@@ -228,11 +228,11 @@ const actions = {
     });
   },
   async setupLocalCandidates({ actions }) {
-    const callerCandidatesCollection = await actions.firebase
+    const callerCandidatesCollection = await actions.connection
       .getRoomRef()
       .collection("callerCandidates");
 
-    actions.firebase
+    actions.connection
       .getPeerConnection()
       .addEventListener("icecandidate", event => {
         if (!event.candidate) {
@@ -315,11 +315,11 @@ const actions = {
     state.connection.peerConnection = new RTCPeerConnection(configuration);
   },
   addLocalTracks({ state, actions }) {
-    actions.firebase
+    actions.connection
       .getLocalStream()
       .getTracks()
       .forEach(track => {
-        actions.firebase
+        actions.connection
           .getPeerConnection()
           .addTrack(track, actions.connection.getLocalStream());
       });
@@ -327,7 +327,7 @@ const actions = {
 
   addCalleeCandidateCollection({ state, actions }) {
     // const calleeCandidatesCollection = roomRef.collection("calleeCandidates");
-    //   actions.firebase
+    //   actions.connection
     //     .getPeerConnection()
     //     .addEventListener("icecandidate", event => {
     //       if (!event.candidate) {
