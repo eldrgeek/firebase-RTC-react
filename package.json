@@ -12,7 +12,7 @@
     "firebase-tools": "^8.6.0",
     "overmind": "24.1.1",
     "overmind-react": "25.1.1",
-    "postcss": "^7.0.32",
+    "postcss": "^8.2.10",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",
